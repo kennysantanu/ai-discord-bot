@@ -31,7 +31,7 @@ async def on_message(message):
         },
     ])
 
-    print(response['message']['content'])
-    await message.channel.send("Response: ",response['message']['content'])
+    print("Response: ", response['message']['content'])
+    await message.channel.send(response['message']['content'])
 
 client.run(token)
