@@ -1,0 +1,10 @@
+services:
+  ai-discord-bot:
+    build:
+      context: .
+      args:
+        DISCORD_TOKEN: ${DISCORD_TOKEN}
+        OLLAMA_URL: ${OLLAMA_URL}
+        OLLAMA_MODEL: ${OLLAMA_MODEL}
+    pull_policy: build
+    restart: unless-stopped
