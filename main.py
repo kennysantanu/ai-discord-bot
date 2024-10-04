@@ -21,13 +21,17 @@ client = discord.Client(intents=intents)
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}')
+    print(f'Ollama URL: {ollama_url}')
+    print(f'Model: {ollama_model}')
 
 @client.event
 async def on_message(message):
+    # Ignore messages from the bot itself
     if message.author == client.user:
         return
 
-    print(f'NEW REQUEST FROM: {message.author} IN {message.channel}')
+    # Accept new request
+    print(f'NEW REQUEST FROM: [{message.author}] IN [{message.channel}]')
 
     history = []
     channel = message.channel
@@ -48,9 +52,12 @@ async def on_message(message):
     
     print("HISTORY: ", history)
 
-    response = ollama.chat(model=ollama_model, messages=history)
-    print("RESPONSE: ", response['message']['content'])
-    
-    await message.channel.send(response['message']['content'])
+    # Send the messages to Ollama
+    async with message.channel.typing():
+        response = ollama.chat(model=ollama_model, messages=history)
+        print("RESPONSE: ", response['message']['content'])
+
+        # Send the response back to the channel
+        await message.channel.send(response['message']['content'])
 
 client.run(token)
