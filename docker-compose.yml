@@ -6,7 +6,8 @@ services:
         DISCORD_TOKEN: ${DISCORD_TOKEN}
         OLLAMA_URL: ${OLLAMA_URL}
         OLLAMA_MODEL: ${OLLAMA_MODEL}
-        HISTORY_LIMIT: ${HISTORY_LIMIT}
         WAKE_WORDS: ${WAKE_WORDS}
+        HISTORY_LIMIT: ${HISTORY_LIMIT}
+        RESPONSE_TIME: ${RESPONSE_TIME}
     pull_policy: build
     restart: unless-stopped
