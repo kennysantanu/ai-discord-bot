@@ -6,10 +6,8 @@ token = os.getenv('DISCORD_TOKEN')
 ollama_url = os.getenv('OLLAMA_URL')
 ollama_model = os.getenv('OLLAMA_MODEL')
 
-if os.getenv('HISTORY_LIMIT') == '':
-    history_limit = 32
-else:
-    history_limit = int(os.getenv('HISTORY_LIMIT'))
+history_limit = 32 if os.getenv('HISTORY_LIMIT') == '' else int(os.getenv('HISTORY_LIMIT'))
+wake_words = [word.strip() for word in os.getenv('WAKE_WORDS').split(',')] if os.getenv('WAKE_WORDS') else []
 
 ollama = Client(host=ollama_url)
 
@@ -23,11 +21,17 @@ async def on_ready():
     print(f'We have logged in as {client.user}')
     print(f'Ollama URL: {ollama_url}')
     print(f'Model: {ollama_model}')
+    print(f'History Limit: {history_limit}')
+    print(f'Wake Words: {wake_words}')
 
 @client.event
 async def on_message(message):
     # Ignore messages from the bot itself
     if message.author == client.user:
+        return
+    
+    # Ignore messages that do not contain bot mention or wake words
+    if client.user.mentioned_in(message) is False and any(word in message.content for word in wake_words) is False:
         return
 
     # Accept new request
@@ -42,14 +46,14 @@ async def on_message(message):
         if msg.author == client.user:
             history.insert(0, {
                 'role': 'assistant',
-                'content': msg.content,
+                'content': msg.clean_content,
             })
         else:
             history.insert(0, {
                 'role': 'user',
-                'content': msg.author.display_name + ': ' + msg.content
+                'content': msg.author.display_name + ': ' + msg.clean_content
             })
-    
+       
     print("HISTORY: ", history)
 
     # Send the messages to Ollama

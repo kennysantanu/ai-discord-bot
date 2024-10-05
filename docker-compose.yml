@@ -7,5 +7,6 @@ services:
         OLLAMA_URL: ${OLLAMA_URL}
         OLLAMA_MODEL: ${OLLAMA_MODEL}
         HISTORY_LIMIT: ${HISTORY_LIMIT}
+        WAKE_WORDS: ${WAKE_WORDS}
     pull_policy: build
     restart: unless-stopped
