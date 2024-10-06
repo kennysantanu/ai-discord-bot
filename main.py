@@ -1,5 +1,6 @@
 import os
 import discord
+from discord.ext import commands
 from ollama import Client
 from datetime import timedelta
 
@@ -11,32 +12,40 @@ wake_words = [word.strip() for word in os.getenv('WAKE_WORDS').split(',')] if os
 history_limit = 32 if os.getenv('HISTORY_LIMIT') == '' else int(os.getenv('HISTORY_LIMIT'))
 response_time = 60 if os.getenv('RESPONSE_TIME') == '' else int(os.getenv('RESPONSE_TIME'))
 
+# Create a new Ollama client instance
 ollama = Client(host=ollama_url)
 
+# Create a new Discord bot instance
 intents = discord.Intents.default()
+intents.members = True
 intents.message_content = True
-
-client = discord.Client(intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 last_response = {}
 
-@client.event
+@bot.event
 async def on_ready():
-    print(f'We have logged in as {client.user}')
+    await bot.tree.sync()
+    print(f'We have logged in as {bot.user}')
     print(f'Ollama URL: {ollama_url}')
     print(f'Model: {ollama_model}')
     print(f'Wake Words: {wake_words}')
     print(f'History Limit: {history_limit}')
     print(f'Response Time: {response_time}')
 
-@client.event
+@bot.tree.command(name="quiet", description="Make the bot stop responding to messages in the current channel.")
+async def quiet(interaction: discord.Interaction):
+    last_response.pop(interaction.channel.name, None)
+    await interaction.response.send_message("I'll be quiet now.")
+
+@bot.event
 async def on_message(message):
     # Ignore messages from the bot itself
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     # Ignore messages if the bot is not mentioned, the message does not contain the wake words, and the last response was not recent
-    mentioned = client.user.mentioned_in(message)
+    mentioned = bot.user.mentioned_in(message)
     contains_wake_word = any(word in message.content for word in wake_words)
     recent_response = (discord.utils.utcnow() < last_response.get(message.channel.name) + timedelta(seconds=response_time)) if message.channel.name in last_response else False
 
@@ -52,7 +61,7 @@ async def on_message(message):
     # Retrieve the message history of the current channel (limit the number of messages)
     async for msg in channel.history(limit=history_limit):
 
-        if msg.author == client.user:
+        if msg.author == bot.user:
             history.insert(0, {
                 'role': 'assistant',
                 'content': msg.clean_content,
@@ -74,4 +83,4 @@ async def on_message(message):
         await message.channel.send(response['message']['content'])
         last_response[message.channel.name] = discord.utils.utcnow()
 
-client.run(token)
+bot.run(token)
