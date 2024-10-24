@@ -2,16 +2,7 @@ services:
   ai-discord-bot:
     build:
       context: .
-      args:
-        DISCORD_TOKEN: ${DISCORD_TOKEN}
-        OLLAMA_URL: ${OLLAMA_URL}
-        OLLAMA_MODEL: ${OLLAMA_MODEL}
-        STABLE_DIFFUSION_URL: ${STABLE_DIFFUSION_URL}
-        WAKE_WORDS: ${WAKE_WORDS}
-        HISTORY_LIMIT: ${HISTORY_LIMIT}
-        RESPONSE_TIME: ${RESPONSE_TIME}
-        POSITIVE_PROMPT: ${POSITIVE_PROMPT}
-        NEGATIVE_PROMPT: ${NEGATIVE_PROMPT}
-        STYLES: ${STYLES}
     pull_policy: build
     restart: unless-stopped
+    env_file:
+      - stack.env
