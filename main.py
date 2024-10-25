@@ -5,6 +5,7 @@ import requests
 import base64
 import tempfile
 import discord
+import asyncio
 from discord import app_commands
 from discord.ext import commands
 from ollama import Client
@@ -285,4 +286,12 @@ async def on_message(message):
         await message.channel.send(response['message']['content'])
         last_response[message.channel.name] = discord.utils.utcnow()
 
-bot.run(token)
+async def main():
+    async with bot:
+        # Load extension cogs
+        await bot.load_extension('cogs.database')
+        await bot.load_extension('cogs.commands')        
+        await bot.start(token)
+
+if __name__ == "__main__":
+    asyncio.run(main())
