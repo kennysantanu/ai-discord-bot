@@ -67,6 +67,16 @@ class Database(commands.Cog):
         token = cursor.fetchone()[0]        
         cursor.close()
         return token
+    
+    async def set_generation_token(self, user: discord.User, token: int):
+        # Register the user if not already registered
+        await self.register_user(user)
+
+        # Set the token
+        cursor = self.database.cursor()
+        cursor.execute("UPDATE user SET generation_token=? WHERE user_id=?", (token, user.id))
+        self.database.commit()
+        cursor.close()
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Database(bot))

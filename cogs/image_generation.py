@@ -16,6 +16,7 @@ styles = [style.strip() for style in os.getenv('STYLES').split(',')] if os.geten
 class ImageGeneration(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.database = self.bot.get_cog("Database")
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -32,6 +33,13 @@ class ImageGeneration(commands.Cog):
     async def draw(self, interaction: discord.Interaction, prompt: str):
         print(f'NEW DRAW REQUEST FROM: [{interaction.user.name}] IN [{interaction.channel}]')
         await interaction.response.defer()
+
+        # Check if the user has enough generation tokens
+        user = interaction.user
+        generation_token = await self.database.get_generation_token(user)
+        if generation_token <= 0:
+            await interaction.followup.send("You don't have enough generation tokens.", ephemeral=True)
+            return
 
         # Load JSON file
         with open('stable_diffusion.json') as f:
@@ -54,6 +62,7 @@ class ImageGeneration(commands.Cog):
 
         # Send the image back to the channel.
         await interaction.followup.send("Here is my drawing of " + prompt, files=[discord.File(temp_file_path)])
+        await self.database.set_generation_token(user, generation_token - 1)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ImageGeneration(bot))
