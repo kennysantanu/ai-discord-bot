@@ -1,11 +1,12 @@
 import os
 import datetime
+import pytz
 import sqlite3
 import discord
 from discord.ext import commands, tasks
 
-UTC_OFFSET = int(os.getenv('UTC_OFFSET')) or 0
-MAX_GENERATION_TOKEN = os.getenv('MAX_GENERATION_TOKEN') or 20
+TIME_ZONE = os.getenv('TIME_ZONE') or 'Etc/UTC'
+MAX_GENERATION_TOKEN = int(os.getenv('MAX_GENERATION_TOKEN')) or 20
 
 class Database(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -24,11 +25,10 @@ class Database(commands.Cog):
             cursor.executescript(file.read())
             self.database.commit()
         cursor.close()
-        print("Database cog loaded")    
+        print("Database cog loaded")
 
-    @tasks.loop(time=datetime.time(hour=0, tzinfo=datetime.timezone(datetime.timedelta(hours=UTC_OFFSET))))
+    @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=datetime.datetime.now(pytz.timezone(TIME_ZONE)).utcoffset().total_seconds() / 3600))))
     async def daily_reset(self):
-        # Add 4 generation tokens to all users in the database every day at midnight until maximum of 20 tokens
         cursor = self.database.cursor()
         cursor.execute("SELECT user_id, generation_token FROM user")
         users = cursor.fetchall()
@@ -42,6 +42,7 @@ class Database(commands.Cog):
 
         self.database.commit()
         cursor.close()
+        print("### Daily reset at", datetime.datetime.now().astimezone(pytz.timezone(TIME_ZONE)), "###")
 
     async def register_user(self, user: discord.User):
         cursor = self.database.cursor()
