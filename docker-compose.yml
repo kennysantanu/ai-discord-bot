@@ -3,6 +3,11 @@ services:
     build:
       context: .
     pull_policy: build
-    restart: unless-stopped
     env_file:
       - stack.env
+    volumes:
+      - db-data:/app/database
+    restart: unless-stopped
+
+volumes:
+  db-data:

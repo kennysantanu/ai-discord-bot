@@ -21,7 +21,7 @@ class Database(commands.Cog):
     async def on_ready(self):
         # Create the user table if not exists from database/database_schema.sql
         cursor = self.database.cursor()
-        with open("database/database_schema.sql", "r") as file:
+        with open("database_schema.sql", "r") as file:
             cursor.executescript(file.read())
             self.database.commit()
         cursor.close()
