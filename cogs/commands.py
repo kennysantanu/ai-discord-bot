@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+USER_ROLES = [role.strip() for role in os.getenv('USER_ROLES').split(',')] if os.getenv('USER_ROLES') else []
 MAX_GENERATION_TOKEN = os.getenv('MAX_GENERATION_TOKEN') or 20
 
 class SplitBillView(discord.ui.View):
@@ -129,6 +130,46 @@ class Commands(commands.Cog):
         user = interaction.user
         generation_token = await database.get_generation_token(user)
         await interaction.response.send_message(embed=discord.Embed(title=f"{user.display_name}'s Profile", description=f"Generation Token: {generation_token}/{MAX_GENERATION_TOKEN}"))
+
+    @app_commands.command(name="roleadd", description="Add a role to yourself")
+    @app_commands.describe(
+        role="The role to add to yourself"
+    )
+    async def roleadd(self, interaction: discord.Interaction, role: str):
+        if role not in USER_ROLES:
+            await interaction.response.send_message(f'Role "{role}" is invalid.', ephemeral=True)
+            return
+
+        guild = interaction.guild
+        member = guild.get_member(interaction.user.id)
+        role = discord.utils.get(guild.roles, name=role)
+
+        if role in member.roles:
+            await interaction.response.send_message(f'You already have the "{role.name}" role.', ephemeral=True)
+            return
+
+        await member.add_roles(role)
+        await interaction.response.send_message(f'You have received the "{role.name}" role.', ephemeral=True)
+
+    @app_commands.command(name="roleremove", description="Remove a role from yourself")
+    @app_commands.describe(
+        role="The role to remove from yourself"
+    )
+    async def roleremove(self, interaction: discord.Interaction, role: str):
+        if role not in USER_ROLES:
+            await interaction.response.send_message(f'Role "{role}" is invalid.', ephemeral=True)
+            return
+
+        guild = interaction.guild
+        member = guild.get_member(interaction.user.id)
+        role = discord.utils.get(guild.roles, name=role)
+
+        if role not in member.roles:
+            await interaction.response.send_message(f'You don\'t have the "{role.name}" role.', ephemeral=True)
+            return
+        
+        await member.remove_roles(role)
+        await interaction.response.send_message(f'You have lost the "{role.name}" role.', ephemeral=True)
 
     @app_commands.command(name="split", description="Split the bill between people.")
     @app_commands.describe(
