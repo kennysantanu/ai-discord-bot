@@ -22,10 +22,10 @@ async def on_ready():
 async def main():
     async with bot:
         # Load extension cogs
-        await bot.load_extension('cogs.image_generation')
         await bot.load_extension('cogs.text_generation')
         await bot.load_extension('cogs.commands')
         await bot.load_extension('cogs.database')
+        await bot.load_extension('cogs.image_generation')
         
         # Start the bot
         await bot.start(TOKEN)
