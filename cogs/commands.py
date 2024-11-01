@@ -124,12 +124,23 @@ class Commands(commands.Cog):
     async def on_ready(self):
         print("Commands cog loaded")
 
-    @app_commands.command(name="profile", description="Shows your profile")
+    @app_commands.command(name="profile", description="Shows your server profile")
     async def profile(self, interaction: discord.Interaction):
+        member = interaction.user
+        embed = discord.Embed(title=f"{member.display_name}'s Profile", description=f"In {interaction.guild.name}", color=discord.Color.blue())
+        embed.set_thumbnail(url=member.display_avatar.url)
+
+        # Economy cog
+        economy_db = self.bot.get_cog("Economy")
+        member_info = economy_db.get_member_info(member)
+        embed.add_field(name="Points", value=member_info[3])
+        embed.add_field(name="Stocks", value=member_info[4])
+
+        # Image generation cog
         database = self.bot.get_cog("Database")
-        user = interaction.user
-        generation_token = await database.get_generation_token(user)
-        await interaction.response.send_message(embed=discord.Embed(title=f"{user.display_name}'s Profile", description=f"Generation Token: {generation_token}/{MAX_GENERATION_TOKEN}"))
+        generation_token = await database.get_generation_token(interaction.user)
+        embed.add_field(name="Generation Token", value=f"{generation_token}/{MAX_GENERATION_TOKEN}")
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="roleadd", description="Add a role to yourself")
     @app_commands.describe(

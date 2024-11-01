@@ -25,6 +25,7 @@ async def main():
         await bot.load_extension('cogs.text_generation')
         await bot.load_extension('cogs.commands')
         await bot.load_extension('cogs.database')
+        await bot.load_extension('cogs.economy')
         await bot.load_extension('cogs.image_generation')
         
         # Start the bot
