@@ -107,6 +107,56 @@ class Economy(commands.Cog):
         embed = discord.Embed(title="Stock Price", description=f"The current stock price is {price} points", color=discord.Color.dark_green())
         await interaction.response.send_message(embed=embed)
 
+    @stock_commands.command(name="buy", description="Buy stocks with your points")
+    async def buy(self, interaction: discord.Interaction, amount: int):
+        user_id = interaction.user.id
+        guild_id = interaction.guild.id
+
+        member_info = self.get_member_info(interaction.user)
+        points = member_info[3]
+        stocks = member_info[4]
+
+        stock_price = self.get_current_stock_price()
+        buy_price = int(stock_price * amount)
+
+        embed = discord.Embed(title="Buy Stocks", color=discord.Color.dark_green())
+
+        if points < buy_price:
+            embed.add_field(name="Error", value=f"You don't have enough points to buy {amount} stocks for a total of {buy_price} points", inline=False)
+            embed.color = discord.Color.red()
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        self.subtract_user_points(user_id, guild_id, buy_price)
+        self.set_user_stocks(user_id, stocks + amount)
+
+        embed.add_field(name="Success", value=f"{interaction.user.display_name} have bought {amount} stocks for {buy_price} points", inline=False)
+        await interaction.response.send_message(embed=embed)
+
+    @stock_commands.command(name="sell", description="Sell stocks for points")
+    async def sell(self, interaction: discord.Interaction, amount: int):
+        user_id = interaction.user.id
+        guild_id = interaction.guild.id
+
+        member_info = self.get_member_info(interaction.user)
+        stocks = member_info[4]
+
+        stock_price = self.get_current_stock_price()
+        sell_price = int(stock_price * amount)
+
+        embed = discord.Embed(title="Sell Stocks", color=discord.Color.red())
+
+        if stocks < amount:
+            embed.add_field(name="Error", value=f"You don't have {amount} stocks to sell", inline=False)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        self.add_user_points(user_id, guild_id, sell_price)
+        self.set_user_stocks(user_id, stocks - amount)
+
+        embed.add_field(name="Success", value=f"{interaction.user.display_name} have sold {amount} stocks for {sell_price} points", inline=False)
+        await interaction.response.send_message(embed=embed)
+        
     def setup_database(self):
         cursor = self.database.cursor()
         with open("cogs/economy.sql", "r") as file:
