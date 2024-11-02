@@ -250,22 +250,13 @@ class Economy(commands.Cog):
         current_price = self.get_current_stock_price()
 
         # Get stock history
-        try:
-            with self.database.cursor() as cursor:
-                cursor.execute("SELECT price FROM stock ORDER BY timestamp ASC LIMIT ?", (AVERAGE_DAYS,))
-                stock_prices = cursor.fetchall()
-                stock_prices_length = len(stock_prices)
-        except Exception as e:
-            print(f"Error fetching stock prices: {e}")
-            return
+        cursor = self.database.cursor()
+        cursor.execute("SELECT price FROM stock ORDER BY timestamp ASC LIMIT ?", (AVERAGE_DAYS,))
+        stock_prices = cursor.fetchall()
+        stock_prices_length = len(stock_prices)        
         
-        # Calculate activity points
-        try:
-            daily_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=1), datetime.datetime.now())
-            baseline_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=min(AVERAGE_DAYS, stock_prices_length)), datetime.datetime.now())
-        except Exception as e:
-            print(f"Error fetching activity points: {e}")
-            return
+        daily_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=1), datetime.datetime.now())
+        baseline_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=min(AVERAGE_DAYS, stock_prices_length)), datetime.datetime.now())        
         
         # Avoid division by zero
         if baseline_activity_points == 0:
