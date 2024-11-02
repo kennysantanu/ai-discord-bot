@@ -191,30 +191,44 @@ class Economy(commands.Cog):
         self.database.commit()
         cursor.close()
 
-    def update_stock_price(self):
-        weight = 1
-        average_days = 30
-        smoothing_factor = 0.1  # Smoothing factor to dampen large fluctuations
-        max_adjustment = 0.05  # Maximum adjustment of 5%
+    def update_stock_price(self) -> None:
+        WEIGHT = 1
+        AVERAGE_DAYS = 30
+        SMOOTHING_FACTOR = 0.1  # Smoothing factor to dampen large fluctuations
+        MAX_ADJUSTMENT = 0.05  # Maximum adjustment of 5%
         
         current_price = self.get_current_stock_price()
+
+        # Get stock history
+        try:
+            with self.database.cursor() as cursor:
+                cursor.execute("SELECT price FROM stock ORDER BY timestamp ASC LIMIT ?", (AVERAGE_DAYS,))
+                stock_prices = cursor.fetchall()
+                stock_prices_length = len(stock_prices)
+        except Exception as e:
+            print(f"Error fetching stock prices: {e}")
+            return
         
         # Calculate activity points
-        daily_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=1), datetime.datetime.now())
-        baseline_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=average_days), datetime.datetime.now())
+        try:
+            daily_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=1), datetime.datetime.now())
+            baseline_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=min(AVERAGE_DAYS, stock_prices_length)), datetime.datetime.now())
+        except Exception as e:
+            print(f"Error fetching activity points: {e}")
+            return
         
         # Avoid division by zero
         if baseline_activity_points == 0:
             price_adjustment_factor = 1
         else:
-            average_daily_points = baseline_activity_points / average_days
-            price_adjustment_factor = (daily_activity_points / average_daily_points) * weight
+            average_daily_points = baseline_activity_points / min(AVERAGE_DAYS, stock_prices_length)
+            price_adjustment_factor = (daily_activity_points / average_daily_points) * WEIGHT
         
         # Apply smoothing factor
-        price_adjustment_factor = 1 + smoothing_factor * (price_adjustment_factor - 1)
+        price_adjustment_factor = 1 + SMOOTHING_FACTOR * (price_adjustment_factor - 1)
         
         # Cap adjustments
-        price_adjustment_factor = max(1 - max_adjustment, min(1 + max_adjustment, price_adjustment_factor))
+        price_adjustment_factor = max(1 - MAX_ADJUSTMENT, min(1 + MAX_ADJUSTMENT, price_adjustment_factor))
         
         # Calculate new price
         new_price = current_price * price_adjustment_factor
