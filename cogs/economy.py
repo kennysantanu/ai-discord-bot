@@ -1,8 +1,10 @@
 import os
+import io
 import datetime
 import pytz
 import sqlite3
 import discord
+import matplotlib.pyplot as plt
 from discord.ext import commands, tasks
 from discord import app_commands
 
@@ -103,9 +105,43 @@ class Economy(commands.Cog):
 
     @stock_commands.command(name="price", description="Get the current stock price")
     async def price(self, interaction: discord.Interaction):
-        price = self.get_current_stock_price()
-        embed = discord.Embed(title="Stock Price", description=f"The current stock price is {price} points", color=discord.Color.dark_green())
-        await interaction.response.send_message(embed=embed)
+        # Get the current stock price
+        current_price = self.get_current_stock_price()
+
+        # Get the stock history
+        prices = []
+        dates = []
+        cursor = self.database.cursor()
+        cursor.execute("SELECT timestamp, price FROM stock ORDER BY timestamp ASC")
+        for row in cursor.fetchall():
+            dates.append(datetime.datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%S.%f").strftime('%m/%d'))
+            prices.append(row[1])
+
+        # Generate the chart
+        plt.figure(figsize=(10, 5))
+        plt.plot(dates, prices, color='green')
+        plt.fill_between(dates, prices, color='green', alpha=0.3)
+        plt.ylim(min(prices), max(prices))
+        plt.xticks(rotation=45)
+        plt.title('Stock Price History')
+        plt.grid(True)
+        plt.tight_layout()
+
+        # Save the chart to a BytesIO object
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        plt.close()
+
+        # Create a discord file from the BytesIO object
+        file = discord.File(buf, filename="stock_price_chart.png")
+
+        # Create an embed with the current stock price
+        embed = discord.Embed(title="Stock Price", description=f"The current stock price is {current_price} points", color=discord.Color.dark_green())
+        embed.set_image(url="attachment://stock_price_chart.png")
+
+        # Send the message with the embed and the file
+        await interaction.response.send_message(embed=embed, file=file)
 
     @stock_commands.command(name="buy", description="Buy stocks with your points")
     async def buy(self, interaction: discord.Interaction, amount: int):
@@ -156,7 +192,7 @@ class Economy(commands.Cog):
 
         embed.add_field(name="Success", value=f"{interaction.user.display_name} have sold {amount} stocks for {sell_price} points", inline=False)
         await interaction.response.send_message(embed=embed)
-        
+
     def setup_database(self):
         cursor = self.database.cursor()
         with open("cogs/economy.sql", "r") as file:
