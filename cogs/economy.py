@@ -1,5 +1,6 @@
 import os
 import io
+import random
 import datetime
 import pytz
 import sqlite3
@@ -101,6 +102,49 @@ class Economy(commands.Cog):
             
         embed.add_field(name="Top 10 Members", value=top_members, inline=False)
         
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="gamble", description="Gamble your points")
+    @app_commands.describe(points="The amount of points you want to gamble")
+    async def gamble(self, interaction: discord.Interaction, points: int = 1):
+        def draw_card():
+            card = random.randint(1, 13)  # Cards are from 1 to 13 (Ace to King)
+            return min(card, 10)
+    
+        user_id = interaction.user.id
+        guild_id = interaction.guild.id
+
+        member_info = self.get_member_info(interaction.user)
+        member_points = member_info[3]
+
+        if member_points < points:
+            error_embed = discord.Embed(title="Gamble", description=f"You don't have {points} points to gamble", color=discord.Color.red())
+            await interaction.response.send_message(embed=error_embed, ephemeral=True)
+            return
+        
+        embed = discord.Embed(title="Gamble", description=f"{interaction.user.display_name} is gambling {points} points", color=discord.Color.gold())
+        
+        # Deal two cards for Player and Banker
+        player_hand = [draw_card(), draw_card()]
+        banker_hand = [draw_card(), draw_card()]
+        
+        player_total = sum(player_hand) % 10
+        banker_total = sum(banker_hand) % 10
+
+        embed.add_field(name="Player Hand", value=f"[{player_hand[0]}] [{player_hand[1]}] = ({player_total})", inline=False)
+        embed.add_field(name="Banker Hand", value=f"[{banker_hand[0]}] [{banker_hand[1]}] = ({banker_total})", inline=False)
+        
+        # Determine the winner
+        if player_total > banker_total:
+            embed.add_field(name="You win!", value=f"You won {points} points!", inline=False)
+            self.add_user_points(user_id, guild_id, points)
+        elif banker_total > player_total:
+            embed.add_field(name="You lose!", value=f"You lost {points} points!", inline=False)
+            self.subtract_user_points(user_id, guild_id, points)
+        else:
+            embed.add_field(name="Its a tie!", value=f"You lost {points} points!", inline=False)
+            self.subtract_user_points(user_id, guild_id, points)
+
         await interaction.response.send_message(embed=embed)
 
     @stock_commands.command(name="price", description="Get the current stock price")
