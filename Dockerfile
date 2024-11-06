@@ -30,6 +30,10 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
+RUN mkdir -p /app/database
+RUN chown appuser:appuser /app/database
+RUN mkdir -p /app/logs
+RUN chown appuser:appuser /app/logs
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
@@ -39,7 +43,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install -r requirements.txt
 
 # Switch to the non-privileged user to run the application.
-# USER appuser
+USER appuser
 
 # Copy the source code into the container.
 COPY . .
