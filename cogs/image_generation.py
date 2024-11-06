@@ -4,6 +4,7 @@ import base64
 import tempfile
 import requests
 import discord
+import logging
 from discord.ext import commands
 from discord import app_commands
 
@@ -14,6 +15,8 @@ extra_negative_prompt = os.getenv('NEGATIVE_PROMPT') or ""
 styles = [style.strip() for style in os.getenv('STYLES').split(',')] if os.getenv('STYLES') else []
 LORAS = json.loads(os.getenv('LORAS')) if os.getenv('LORAS') else {}
 
+logger = logging.getLogger(__name__)
+
 class ImageGeneration(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -21,19 +24,19 @@ class ImageGeneration(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        print("ImageGeneration cog loaded") 
-        print(f"STABLE_DIFFUSION_URL: {stable_diffusion_url}")
-        print(f"EXTRA_POSITIVE_PROMPT: {extra_positive_prompt}")
-        print(f"EXTRA_NEGATIVE_PROMPT: {extra_negative_prompt}")
-        print(f"STYLES: {styles}")
-        print(f"LORAS: {LORAS}")
+        logger.info("ImageGeneration cog loaded") 
+        logger.info(f"STABLE_DIFFUSION_URL: {stable_diffusion_url}")
+        logger.info(f"EXTRA_POSITIVE_PROMPT: {extra_positive_prompt}")
+        logger.info(f"EXTRA_NEGATIVE_PROMPT: {extra_negative_prompt}")
+        logger.info(f"STYLES: {styles}")
+        logger.info(f"LORAS: {LORAS}")
 
     @app_commands.command(name="draw", description="Generate an image based on the given text.")
     @app_commands.describe(
         prompt="Describe the image you want to generate."
     )
     async def draw(self, interaction: discord.Interaction, prompt: str):
-        print(f'NEW DRAW REQUEST FROM: [{interaction.user.name}] IN [{interaction.channel}]')
+        logger.info(f'NEW DRAW REQUEST FROM: [{interaction.user.name}] IN [{interaction.channel}]')
 
         # Check if the user has enough generation tokens
         user = interaction.user
@@ -45,7 +48,7 @@ class ImageGeneration(commands.Cog):
         await interaction.response.defer()
 
         original_prompt = prompt
-        print("PROMPT:", original_prompt)
+        logger.info("PROMPT:", original_prompt)
 
         # search for LORA key in the prompt and replace with LORA value if found
         for key, value in LORAS.items():
@@ -62,7 +65,7 @@ class ImageGeneration(commands.Cog):
         # Send the request to the Stable Diffusion API
         response = requests.post(url=f'{stable_diffusion_url}/sdapi/v1/txt2img', json=payload)
         r = response.json()
-        print("RESPONSE:", r["info"])
+        logger.info("RESPONSE:", r["info"])
 
         # Decode and save the image to a temporary file.
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:

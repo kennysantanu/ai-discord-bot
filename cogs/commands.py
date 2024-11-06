@@ -1,11 +1,14 @@
 import os
 import math
 import discord
+import logging
 from discord.ext import commands
 from discord import app_commands
 
 USER_ROLES = [role.strip() for role in os.getenv('USER_ROLES').split(',')] if os.getenv('USER_ROLES') else []
 MAX_GENERATION_TOKEN = os.getenv('MAX_GENERATION_TOKEN') or 20
+
+logger = logging.getLogger(__name__)
 
 class SplitBillView(discord.ui.View):
     def __init__(self, interaction: discord.Interaction, people: list, items: list, prices: list, sub_total: float, total: float):
@@ -122,7 +125,7 @@ class Commands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        print("Commands cog loaded")
+        logger.info("Commands cog loaded")
 
     @app_commands.command(name="profile", description="Shows your server profile")
     async def profile(self, interaction: discord.Interaction):

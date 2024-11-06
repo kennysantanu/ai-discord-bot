@@ -3,10 +3,13 @@ import datetime
 import pytz
 import sqlite3
 import discord
+import logging
 from discord.ext import commands, tasks
 
 TIME_ZONE = os.getenv('TIME_ZONE') or 'Etc/UTC'
 MAX_GENERATION_TOKEN = int(os.getenv('MAX_GENERATION_TOKEN')) or 20
+
+logger = logging.getLogger(__name__)
 
 class Database(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -25,7 +28,7 @@ class Database(commands.Cog):
             cursor.executescript(file.read())
             self.database.commit()
         cursor.close()
-        print("Database cog loaded")
+        logger.info("Database cog loaded")
 
     @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=datetime.datetime.now(pytz.timezone(TIME_ZONE)).utcoffset().total_seconds() / 3600))))
     async def daily_reset(self):
@@ -42,7 +45,7 @@ class Database(commands.Cog):
 
         self.database.commit()
         cursor.close()
-        print("### Daily reset at", datetime.datetime.now().astimezone(pytz.timezone(TIME_ZONE)), "###")
+        logger.info("Daily reset completed")
 
     async def register_user(self, user: discord.User):
         cursor = self.database.cursor()

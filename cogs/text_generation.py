@@ -1,5 +1,6 @@
 import os
 import discord
+import logging
 from discord.ext import commands
 from discord import app_commands
 from ollama import Client
@@ -13,6 +14,8 @@ history_limit = 32 if os.getenv('HISTORY_LIMIT') == '' else int(os.getenv('HISTO
 response_time = 60 if os.getenv('RESPONSE_TIME') == '' else int(os.getenv('RESPONSE_TIME'))
 PREFIX = os.getenv('PREFIX') or "!"
 
+logger = logging.getLogger(__name__)
+
 # Create a new Ollama client instance
 ollama = Client(host=ollama_url)
 last_response = {}
@@ -23,12 +26,12 @@ class TextGeneration(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        print("TextGeneration cog loaded")
-        print(f'Ollama URL: {ollama_url}')
-        print(f'Model: {ollama_model}')
-        print(f'Wake Words: {wake_words}')
-        print(f'History Limit: {history_limit}')
-        print(f'Response Time: {response_time}')
+        logger.info("TextGeneration cog loaded")
+        logger.info(f'Ollama URL: {ollama_url}')
+        logger.info(f'Model: {ollama_model}')
+        logger.info(f'Wake Words: {wake_words}')
+        logger.info(f'History Limit: {history_limit}')
+        logger.info(f'Response Time: {response_time}')
 
     @app_commands.command(name="quiet", description="Make the bot stop responding to messages in the current channel.")
     async def quiet(self, interaction: discord.Interaction):
@@ -54,7 +57,7 @@ class TextGeneration(commands.Cog):
             return
         
         # Accept new request
-        print(f'NEW CHAT REQUEST FROM: [{message.author}] IN [{message.channel}]')
+        logger.info(f'NEW CHAT REQUEST FROM: [{message.author}] IN [{message.channel}]')
 
         history = []
         channel = message.channel
@@ -73,12 +76,12 @@ class TextGeneration(commands.Cog):
                     'content': msg.author.display_name + ': ' + msg.clean_content
                 })
         
-        print("HISTORY: ", history)
+        logger.info("HISTORY: ", history)
 
         # Send the messages to Ollama
         async with message.channel.typing():
             response = ollama.chat(model=ollama_model, messages=history)
-            print("RESPONSE: ", response['message']['content'])
+            logger.info("RESPONSE: ", response['message']['content'])
 
             # Send the response back to the channel
             await message.channel.send(response['message']['content'])

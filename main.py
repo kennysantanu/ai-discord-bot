@@ -1,11 +1,21 @@
 import os
+import json
 import discord
 import asyncio
+import logging
+from logging.config import dictConfig
 from discord.ext import commands
 
 # Load environment variables
 TOKEN = os.getenv('DISCORD_TOKEN')
 PREFIX = os.getenv('PREFIX') or "!"
+
+# Set up logging
+with open('logging_config.json', 'r') as f:
+    config = json.load(f)
+    dictConfig(config)
+
+logger = logging.getLogger("bot")
 
 # Create a new Discord bot instance
 intents = discord.Intents.default()
@@ -17,7 +27,7 @@ bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    print(f'We have logged in as {bot.user}')
+    logger.info(f'We have logged in as {bot.user}')
 
 async def main():
     async with bot:

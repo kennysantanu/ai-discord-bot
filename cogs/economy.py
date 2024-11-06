@@ -5,6 +5,7 @@ import datetime
 import pytz
 import sqlite3
 import discord
+import logging
 import matplotlib.pyplot as plt
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -13,6 +14,8 @@ TIME_ZONE = os.getenv('TIME_ZONE') or 'Etc/UTC'
 INITIAL_STOCK_PRICE = int(os.getenv('INITIAL_STOCK_PRICE', 100))
 NEW_MEMBER_POINTS = int(os.getenv('NEW_MEMBER_POINTS', 0))
 NEW_MEMBER_STOCKS = int(os.getenv('NEW_MEMBER_STOCKS', 0))
+
+logger = logging.getLogger(__name__)
 
 class Economy(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -25,7 +28,7 @@ class Economy(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         self.setup_database()
-        print("Economy cog loaded")
+        logging.info("Economy cog loaded")
 
     @tasks.loop(
         time=datetime.time(
@@ -39,10 +42,10 @@ class Economy(commands.Cog):
         )
     )
     async def daily_event(self):
-        print("### Economy daily event at", datetime.datetime.now().astimezone(pytz.timezone(TIME_ZONE)), "###")
-        print("Current stock price:", self.get_current_stock_price())
+        logger.info("Economy daily event started")
+        logger.info("Current stock price:", self.get_current_stock_price())
         await self.update_stock_price()
-        print("New stock price:", self.get_current_stock_price())
+        logger.info("New stock price:", self.get_current_stock_price())
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -350,6 +353,11 @@ class Economy(commands.Cog):
         
         # Cap adjustments
         price_adjustment_factor = max(1 - MAX_ADJUSTMENT, min(1 + MAX_ADJUSTMENT, price_adjustment_factor))
+
+        # Log information
+        logger.info("Daily activity points:", daily_activity_points)
+        logger.info("Average daily points:", average_daily_points)
+        logger.info("Price adjustment factor:", price_adjustment_factor)
         
         # Calculate new price
         new_price = current_price * price_adjustment_factor
