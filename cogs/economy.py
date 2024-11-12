@@ -21,13 +21,13 @@ class Economy(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.database = sqlite3.connect("database/economy.db", check_same_thread=False)
+        self.setup_database()
         self.daily_event.start()
 
     stock_commands = app_commands.Group(name="stock", description="Stock market commands")
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.setup_database()
         logging.info("Economy cog loaded")
 
     @tasks.loop(
@@ -43,9 +43,9 @@ class Economy(commands.Cog):
     )
     async def daily_event(self):
         logger.info("Economy daily event started")
-        logger.info("Current stock price:", self.get_current_stock_price())
+        logger.info(f"Current stock price: {self.get_current_stock_price()}")
         await self.update_stock_price()
-        logger.info("New stock price:", self.get_current_stock_price())
+        logger.info(f"New stock price: {self.get_current_stock_price()}")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -324,7 +324,7 @@ class Economy(commands.Cog):
         self.database.commit()
         cursor.close()
 
-    def update_stock_price(self) -> None:
+    async def update_stock_price(self):
         WEIGHT = 1
         AVERAGE_DAYS = 30
         SMOOTHING_FACTOR = 0.1  # Smoothing factor to dampen large fluctuations
@@ -336,11 +336,18 @@ class Economy(commands.Cog):
         cursor = self.database.cursor()
         cursor.execute("SELECT price FROM stock ORDER BY timestamp ASC LIMIT ?", (AVERAGE_DAYS,))
         stock_prices = cursor.fetchall()
-        stock_prices_length = len(stock_prices)        
+        stock_prices_length = len(stock_prices)
+        cursor.close()
         
         daily_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=1), datetime.datetime.now())
         baseline_activity_points = self.get_activity_points(datetime.datetime.now() - datetime.timedelta(days=min(AVERAGE_DAYS, stock_prices_length)), datetime.datetime.now())        
         
+        if daily_activity_points is None:
+            daily_activity_points = 1
+
+        if baseline_activity_points is None:
+            baseline_activity_points = 1
+
         # Avoid division by zero
         if baseline_activity_points == 0:
             price_adjustment_factor = 1
@@ -350,14 +357,14 @@ class Economy(commands.Cog):
         
         # Apply smoothing factor
         price_adjustment_factor = 1 + SMOOTHING_FACTOR * (price_adjustment_factor - 1)
-        
-        # Cap adjustments
-        price_adjustment_factor = max(1 - MAX_ADJUSTMENT, min(1 + MAX_ADJUSTMENT, price_adjustment_factor))
 
         # Log information
-        logger.info("Daily activity points:", daily_activity_points)
-        logger.info("Average daily points:", average_daily_points)
-        logger.info("Price adjustment factor:", price_adjustment_factor)
+        logger.info(f"Daily activity points: {daily_activity_points}")
+        logger.info(f"Average daily points: {baseline_activity_points}/{min(AVERAGE_DAYS, stock_prices_length)} = {average_daily_points}")
+        logger.info(f"Price adjustment factor: {price_adjustment_factor}")
+
+        # Cap adjustments
+        price_adjustment_factor = max(1 - MAX_ADJUSTMENT, min(1 + MAX_ADJUSTMENT, price_adjustment_factor))
         
         # Calculate new price
         new_price = current_price * price_adjustment_factor
