@@ -143,16 +143,16 @@ class Economy(commands.Cog):
 
         value_str = ""
         if player > 0:
-            value_str += f"\n{player} on Player"
+            value_str += f"\n{player} points on Player"
 
         if banker > 0:
-            value_str += f"\n{banker} on Banker"
+            value_str += f"\n{banker} points on Banker"
 
         if tie > 0:
-            value_str += f"\n{tie} on Tie"
+            value_str += f"\n{tie} points on Tie ({tie * 8} points payout!)"
 
 
-        embed.add_field(name=f"{interaction.user.display_name} is gambling {points} point{'' if points == 1 or points == -1 else 's'}!", value=value_str)
+        embed.add_field(name=f"{interaction.user.display_name} is betting {points} point{'' if points == 1 or points == -1 else 's'}!", value=value_str, inline=False)
         
         # Deal two cards for Player and Banker
         player_hand = [draw_card(), draw_card()]
@@ -166,29 +166,20 @@ class Economy(commands.Cog):
         
         # Determine the winner
         if player_total > banker_total:
-            if player > 0:
-                self.add_user_points(user_id, guild_id, player)
-                self.subtract_user_points(user_id, guild_id, banker + tie)
-                embed.add_field(name="Player win!", value=f"Result: {player - banker - tie} point{'' if (player - banker - tie) == 1 or (player - banker - tie) == -1 else 's'}")
-            else:
-                self.subtract_user_points(user_id, guild_id, points)
-                embed.add_field(name="Player win!", value=f"Result: {0 - points} point{'' if (0 - points) == 1 or (0 - points) == -1 else 's'}")
+            payout = player - banker - tie
+            self.add_user_points(user_id, guild_id, player)
+            self.subtract_user_points(user_id, guild_id, banker + tie)
+            embed.add_field(name="Player win!", value=f"{interaction.user.display_name} {'won' if payout > 0 else 'lost'} {abs(payout)} point{'s' if abs(payout) != 1 else ''}", inline=False)
         elif banker_total > player_total:
-            if banker > 0:
-                self.add_user_points(user_id, guild_id, banker)
-                self.subtract_user_points(user_id, guild_id, player + tie)
-                embed.add_field(name="Banker win!", value=f"Result: {banker - player - tie} point{'' if (banker - player - tie) == 1 or (banker - player - tie) == -1 else 's'}")
-            else:
-                self.subtract_user_points(user_id, guild_id, points)
-                embed.add_field(name="Banker win!", value=f"Result: {0 - points} point{'' if (0 - points) == 1 or (0 - points) == -1 else 's'}")
+            payout = banker - player - tie
+            self.add_user_points(user_id, guild_id, banker)
+            self.subtract_user_points(user_id, guild_id, player + tie)
+            embed.add_field(name="Banker win!", value=f"{interaction.user.display_name} {'won' if payout > 0 else 'lost'} {abs(payout)} point{'s' if abs(payout) != 1 else ''}", inline=False)
         else:
-            if tie > 0:
-                self.add_user_points(user_id, guild_id, tie * 8)
-                self.subtract_user_points(user_id, guild_id, player + banker)
-                embed.add_field(name="Tie!", value=f"Result: {tie * 8 - player - banker} point{'' if (tie * 8 - player - banker) == 1 or (tie * 8 - player - banker) == -1 else 's'}")
-            else:
-                self.subtract_user_points(user_id, guild_id, points)
-                embed.add_field(name="Tie!", value=f"Result: {0 - points} point{'' if (0 - points) == 1 or (0 - points) == -1 else 's'}")
+            payout = tie * 8 - player - banker
+            self.add_user_points(user_id, guild_id, tie * 8)
+            self.subtract_user_points(user_id, guild_id, player + banker)
+            embed.add_field(name="Tie!", value=f"{interaction.user.display_name} {'won' if payout > 0 else 'lost'} {abs(payout)} point{'s' if abs(payout) != 1 else ''}", inline=False)
 
         await interaction.response.send_message(embed=embed)
 
