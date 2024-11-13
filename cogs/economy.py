@@ -108,24 +108,51 @@ class Economy(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="gamble", description="Gamble your points")
-    @app_commands.describe(points="The amount of points you want to gamble")
-    async def gamble(self, interaction: discord.Interaction, points: int = 1):
+    @app_commands.describe(player="Bet amount on player", banker="Bet amount on banker", tie="Bet amount on tie (8x payout)")
+    async def gamble(self, interaction: discord.Interaction, player: int = 0, banker: int = 0, tie: int = 0):
         def draw_card():
             card = random.randint(1, 13)  # Cards are from 1 to 13 (Ace to King)
             return min(card, 10)
-    
+        
+        # Prevent negative bets
+        if player < 0 or banker < 0 or tie < 0:
+            error_embed = discord.Embed(title="Gamble", description="Bets cannot be negative", color=discord.Color.red())
+            await interaction.response.send_message(embed=error_embed, ephemeral=True)
+            return
+
+        # Get user and guild IDs
         user_id = interaction.user.id
         guild_id = interaction.guild.id
 
+        # Get user points
         member_info = self.get_member_info(interaction.user)
         member_points = member_info[3]
 
+        # Default to bet 1 point on player if no bets are placed
+        if player == 0 and banker == 0 and tie == 0:
+            player = 1
+
+        points = player + banker + tie
+
         if member_points < points:
-            error_embed = discord.Embed(title="Gamble", description=f"You don't have {points} points to gamble", color=discord.Color.red())
+            error_embed = discord.Embed(title="Gamble", description=f"You don't have {points} point{'' if points == 1 or points == -1 else 's'} to gamble", color=discord.Color.red())
             await interaction.response.send_message(embed=error_embed, ephemeral=True)
             return
         
-        embed = discord.Embed(title="Gamble", description=f"{interaction.user.display_name} is gambling {points} points", color=discord.Color.gold())
+        embed = discord.Embed(title="Gamble", color=discord.Color.gold())
+
+        value_str = ""
+        if player > 0:
+            value_str += f"\n{player} on Player"
+
+        if banker > 0:
+            value_str += f"\n{banker} on Banker"
+
+        if tie > 0:
+            value_str += f"\n{tie} on Tie"
+
+
+        embed.add_field(name=f"{interaction.user.display_name} is gambling {points} point{'' if points == 1 or points == -1 else 's'}!", value=value_str)
         
         # Deal two cards for Player and Banker
         player_hand = [draw_card(), draw_card()]
@@ -134,19 +161,34 @@ class Economy(commands.Cog):
         player_total = sum(player_hand) % 10
         banker_total = sum(banker_hand) % 10
 
-        embed.add_field(name="Player Hand", value=f"[{player_hand[0]}] [{player_hand[1]}] = ({player_total})", inline=False)
-        embed.add_field(name="Banker Hand", value=f"[{banker_hand[0]}] [{banker_hand[1]}] = ({banker_total})", inline=False)
+        embed.add_field(name="Player Hand", value=f"[{player_hand[0]}] [{player_hand[1]}] = ({player_total})")
+        embed.add_field(name="Banker Hand", value=f"[{banker_hand[0]}] [{banker_hand[1]}] = ({banker_total})")
         
         # Determine the winner
         if player_total > banker_total:
-            embed.add_field(name="You win!", value=f"You won {points} points!", inline=False)
-            self.add_user_points(user_id, guild_id, points)
+            if player > 0:
+                self.add_user_points(user_id, guild_id, player)
+                self.subtract_user_points(user_id, guild_id, banker + tie)
+                embed.add_field(name="Player win!", value=f"Result: {player - banker - tie} point{'' if (player - banker - tie) == 1 or (player - banker - tie) == -1 else 's'}")
+            else:
+                self.subtract_user_points(user_id, guild_id, points)
+                embed.add_field(name="Player win!", value=f"Result: {0 - points} point{'' if (0 - points) == 1 or (0 - points) == -1 else 's'}")
         elif banker_total > player_total:
-            embed.add_field(name="You lose!", value=f"You lost {points} points!", inline=False)
-            self.subtract_user_points(user_id, guild_id, points)
+            if banker > 0:
+                self.add_user_points(user_id, guild_id, banker)
+                self.subtract_user_points(user_id, guild_id, player + tie)
+                embed.add_field(name="Banker win!", value=f"Result: {banker - player - tie} point{'' if (banker - player - tie) == 1 or (banker - player - tie) == -1 else 's'}")
+            else:
+                self.subtract_user_points(user_id, guild_id, points)
+                embed.add_field(name="Banker win!", value=f"Result: {0 - points} point{'' if (0 - points) == 1 or (0 - points) == -1 else 's'}")
         else:
-            embed.add_field(name="Its a tie!", value=f"You lost {points} points!", inline=False)
-            self.subtract_user_points(user_id, guild_id, points)
+            if tie > 0:
+                self.add_user_points(user_id, guild_id, tie * 8)
+                self.subtract_user_points(user_id, guild_id, player + banker)
+                embed.add_field(name="Tie!", value=f"Result: {tie * 8 - player - banker} point{'' if (tie * 8 - player - banker) == 1 or (tie * 8 - player - banker) == -1 else 's'}")
+            else:
+                self.subtract_user_points(user_id, guild_id, points)
+                embed.add_field(name="Tie!", value=f"Result: {0 - points} point{'' if (0 - points) == 1 or (0 - points) == -1 else 's'}")
 
         await interaction.response.send_message(embed=embed)
 
